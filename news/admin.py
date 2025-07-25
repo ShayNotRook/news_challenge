@@ -1,3 +1,12 @@
 from django.contrib import admin
 
-# Register your models here.
+from .models import News, Tag
+
+@admin.register(News)
+class NewsAdmin(admin.ModelAdmin):
+    model = News
+    
+
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
+    model = News
