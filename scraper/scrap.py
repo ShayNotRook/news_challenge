@@ -1,19 +1,25 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
 from bs4 import BeautifulSoup
 
 import time
 import json
 
-browser = webdriver.Chrome()
 
+chrome_options = Options()
+chrome_options.add_argument("--headless=new")
+chrome_options.add_argument("--disable-gui")
+chrome_options.add_argument("--disable-extenstions")
+
+browser = webdriver.Chrome(options=chrome_options)
 browser.get("https://www.zoomit.ir/archive/")
 
 
 SCROLL_PAUSE_TIME = 2
 last_height = browser.execute_script("return document.body.scrollHeight")
 
-for i in range(5):
+for i in range(3):
     browser.execute_script("window.scrollTo(0, document.body.scrollHeight)")
     time.sleep(SCROLL_PAUSE_TIME)
     
@@ -42,13 +48,12 @@ def extract_tags(driver):
     if not main:
         return []
     
-    # پیدا کردن header یا بخشی که تگ‌ها داخلش هستن
     possible_headers = main.find_all('div', recursive=True)
     tags = []
 
     for section in possible_headers:
         links = section.find_all('a')
-        if 1 < len(links) < 10:  # چون معمولاً تعداد تگ‌ها محدوده
+        if 1 < len(links) < 10: # Tags are usually limited
             tag_texts = []
             for link in links:
                 span = link.find('span')
@@ -66,17 +71,27 @@ def extract_article_data(driver, url):
 
     soup = BeautifulSoup(driver.page_source, "html.parser")
 
-    # title
+    # Title
     title_elem = soup.find("h1")
     title = title_elem.get_text(strip=True) if title_elem else ""
 
-    # body
-    # article = soup.find("article")
-    paragraphs = soup.find_all('span', attrs={"variant": "body"})
-    body = "\n".join(p.get_text(strip=True) for p in paragraphs)
+    # Body
+    article = soup.select_one("main > article")
+    body_containers = article.find_all("div", class_=False)
 
-    # tags
-    # tag_links = soup.select("a[href^='/tag/']")
+
+    body_paragraphs = []
+    for div in body_containers:
+        body_paragraphs.extend(div.find_all("p"))
+    
+    
+    # body_paragraphs = body_paragraphs.find_all("p", attr={"variant": "body"}) if target_div else []
+
+    
+    # paragraphs = soup.find_all('span', attrs={"variant": "body"})
+    body = "\n".join(p.get_text(strip=True) for p in body_paragraphs)
+
+    # Tags
     tags = extract_tags(driver)
     
 
@@ -87,25 +102,27 @@ def extract_article_data(driver, url):
     }
     
     
-    
-# for link in links:
-#     print(extract_article_data(browser, link))
-# print(extract_article_data(browser, "https://www.zoomit.ir/space/444747-elon-musk-possibility-spacex-starship-failure/"))
 
-def dump_article_extraction(driver, links):
-    # data = [extract_article_data(driver, link) for link in links]
+
+def test_article_extraction(driver, links):
     data = extract_article_data(driver, links)
 
-    # چاپ امن
-    for article in data:
-        for k, v in article.items():
-            print(f"\n=== {k.upper()} ===")
-            print(v[:300] + '...' if isinstance(v, str) and len(v) > 300 else v)
+    # Prints for checking in console (Just for preview)
+    
+    for k, v in data.items():
+        print(f"\n=== {k.upper()} ===")
+        print(v[:300] + '...' if isinstance(v, str) and len(v) > 300 else v)
 
-    # ذخیره در فایل
+    # Saves to article_data.json
     with open("article_data.json", "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
         
         
-# test_article_extraction(browser, "https://www.zoomit.ir/space/444747-elon-musk-possibility-spacex-starship-failure/")
-dump_article_extraction(browser, "https://www.zoomit.ir/space/444791-south-korea-builds-moon-base/")
+
+def get_articles_data(driver, links):
+    data = [extract_article_data(driver, link) for link in links]
+    
+    return data
+
+
+test_article_extraction(browser, "https://www.zoomit.ir/space/444791-south-korea-builds-moon-base/")    
