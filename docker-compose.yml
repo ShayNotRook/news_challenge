@@ -46,6 +46,7 @@ services:
       - django
     env_file:
       - .env
+
   celery-flower:
     build: .
     container_name: celery_flower
