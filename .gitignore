@@ -1,0 +1,5 @@
+.env
+article_data.json
+db_sqlite3
+Pipfile
+Pipfile.lock
